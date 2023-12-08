@@ -1,0 +1,45 @@
+enclave {
+    
+    from "sgx_tsgxssl.edl" import *;
+    from "sgx_pthread.edl" import *;
+    
+    trusted {
+
+        public void EcallSealData( [in, size=cipher_len] uint8_t* ciphertext,
+                                    size_t cipher_len,
+                                    [in, size=iv_len] uint8_t* iv,
+                                    size_t iv_len,
+                                    [in, size=tag_len] uint8_t* tag,
+                                    size_t tag_len );
+
+        public void EcallGetUserPasswords( [in, size=password_len] uint8_t* passwords,
+                                    size_t password_len,
+                                    [in, size=iv_len] uint8_t* iv,
+                                    size_t iv_len,
+                                    [in, size=tag_len] uint8_t* tag,
+                                    size_t tag_len );
+
+        public void EcallGetBreachedPasswords( [in, count=arr_len] const char** breached_arr, size_t arr_len );
+ 
+        public void EcallComparePasswords( long long user_id );
+
+    };
+ 
+    untrusted {
+        
+        int OcallIsFileExist( [in, string] const char* file_name );
+
+        void OcallSaveFile( [in, size=data_len] uint8_t* sealed_data, size_t data_len );
+
+        size_t OcallGetFileSize( [in, string] const char* file_name );
+
+        void LoadFile( [in, string] const char* file_name, 
+                       [out, size=sealed_size] uint8_t* sealed_data, 
+                       size_t sealed_size );
+
+        void OcallSendResult( [in, size=cipher_len] uint8_t*ciphertext, size_t cipher_len );
+
+        void OcallPrintError( [in, string] const char *error_message );
+
+    };
+}; 
