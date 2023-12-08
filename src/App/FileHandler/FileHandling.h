@@ -11,7 +11,7 @@ bool GetFileContent(const char* FILE_NAME, uint8_t* sealed_data, size_t sealed_s
 size_t GetFileSize(const char* FILE_NAME);
 uint8_t* GetAESKeyFromFile(const char* FILE_NAME);
 std::vector<std::string> ReadFileLines(const std::string& FILE_NAME);
-bool SaveKeyToFile(const char* FILE_NAME, const RSA* key);
+bool SaveKeyToFile(const char* FILE_NAME, RSA* key);
 RSA* LoadRSAKeyFromFile(const char* FILE_NAME, bool isPrivateKey);
 bool SaveUserID(const char* FILE_NAME, long long user_id);
 

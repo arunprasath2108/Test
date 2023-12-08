@@ -71,7 +71,7 @@ std::vector<std::string> ReadFileLines(const std::string& FILE_NAME) {
   return lines;
 }
 
-bool SaveKeyToFile(const char* FILE_NAME, const RSA* key) {
+bool SaveKeyToFile(const char* FILE_NAME, RSA* key) {
     FILE* file = fopen(FILE_NAME, "w");
     if (!file) {
         printf("failed to opening file for writing %s\n",FILE_NAME);

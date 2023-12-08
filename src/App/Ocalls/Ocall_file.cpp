@@ -1,12 +1,9 @@
 #include "Ocall_file.h"
 
-#include "../CryptoUntrusted/Crypto_u.h"
-
-//print string
 void OcallPrintError(const char* error_message) {
     printf("[ERROR] %s\n", error_message);
 }
-  
+    
 void OcallSaveFile(uint8_t* sealed_data, size_t sealed_size) {
     bool isFileSaved = SaveFile(sealed_data, sealed_size);
     if( !isFileSaved ) {
@@ -31,46 +28,54 @@ void LoadFile( const char* FILE_NAME, uint8_t* sealed_data, size_t sealed_size) 
     printf("unable to load the file %s\n.", FILE_NAME);
 }
 
-void OcallSendResult(uint8_t*ciphertext, size_t cipher_len) {
-    
-    std::string uid_str = std::to_string(g_user_id);
-    std::string keys_file = "Test/keys/" + uid_str + "_key.pem";
+void PrintDecryptedData(const std::string& decryptedStr) {
+    std::istringstream iss(decryptedStr);
+    std::string pair;
 
-    RSA* privateKey = LoadRSAKeyFromFile(keys_file.c_str(), true);
+    while (std::getline(iss, pair, '~')) {
+        size_t dashPos = pair.find('-');
+        if (dashPos != std::string::npos) {
+            std::string hash = pair.substr(0, dashPos);
+            std::string hash_status = pair.substr(dashPos + 1);
+            std::cout << hash << " : " << hash_status << std::endl;
+        }
+    }
+}
+
+void OcallSendResult(uint8_t*ciphertext, size_t cipher_len) {
+
+    std::string uid = std::to_string(g_user_id);
+    std::string key_file = "Test/Keys/" + uid + "_key.pem";
+
+    RSA* privateKey = LoadRSAKeyFromFile(key_file.c_str(), true);
     if (!privateKey) {
         RSA_free(privateKey);
-        printf("failed to load the private key from file %s\n.", TEST_USER_PRIVATE_KEY);
+        printf("failed to load the private key from file %s\n.", key_file.c_str());
         return;
     }
 
     unsigned char* decrypted_data = nullptr;
     int decrypted_len = 0;
     if (RSADecrypt(privateKey, ciphertext, (int)cipher_len, &decrypted_data, &decrypted_len)) {
-        std::cout << "Breached Passwords :  \n" << std::string(reinterpret_cast<char*>(decrypted_data), decrypted_len) << std::endl;
+        std::cout << "\nBreached Passwords :\n-----------------------------------------------------\n";
+        std::string decryptedStr =  std::string(reinterpret_cast<char*>(decrypted_data), decrypted_len);
+        PrintDecryptedData(decryptedStr);
     }
 
     free(decrypted_data);
     RSA_free(privateKey);
 }
+ 
+int OcallGetAPIResponse(const char* prefix_hash, char* str[], size_t* length) {
 
-// void printCipher(uint8_t* ciphertext, size_t cipher_len){
-//     Ocall_PrintCipherText(ciphertext, cipher_len);
-// }
+    std::string URL = API_URL + prefix_hash;
+    std::string response = FetchData(URL);
+    if(response.empty()) {
+        return 0;
+    }
 
-// void ocall_print_uc(uint8_t* str, size_t len){
-//     printf("unsigned char size : %li ", len);
-//     printf("%s", str);
-// }
-
-// void Ocall_PrintCipherText(uint8_t* ciphertext, int ciphertext_len) {
-    
-//     for (size_t i = 0; i < ciphertext_len; ++i) {
-//         printf("%02X ", ciphertext[i]);
-//     } 
-   
-//     std::cout << std::endl;
-// }
-
-// void ocall_print_int(size_t num) {
-//     std::cout << "num : " << num << "\n";
-// }
+    *length = response.length();
+    *str = new char[*length + 1];
+    std::strcpy(*str, response.c_str());
+    return 1;
+}   

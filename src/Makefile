@@ -71,7 +71,7 @@ endif
 
 Untrusted_Openssl_Path := $(SGX_SSL)/include/openssl
 App_Compile_CXXFlags := -std=c++0x $(App_Compile_CFlags)
-App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread -L$(SGX_SSL)/lib64 -lsgx_usgxssl -L$(Untrusted_Openssl_Path) -lssl -lcrypto
+App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread -L$(SGX_SSL)/lib64 -lsgx_usgxssl -L$(Untrusted_Openssl_Path) -lssl -lcrypto -lcurl
 
 Gen_Untrusted_Source_Seal := App/Enclave_u.c
 Gen_Untrusted_Object_Seal := App/Enclave_u.o
@@ -190,6 +190,8 @@ endif
 	@rm -f .config_* $(App_Name) $(App_Objects) $(Enclave_Seal_Name) $(Signed_Enclave_Seal_Name)
 	@rm -f $(Enclave_Objects_Files) App/Enclave_u.* Enclave/Enclave_t.*
 	@touch .config_$(Build_Mode)_$(SGX_ARCH)
+	@mkdir -p Test Test/Keys
+	@touch Test/users_id.txt
 
 
 # App Objects 
@@ -249,8 +251,9 @@ endif
 
 clean:
 	@rm -f .config_* $(App_Name) $(App_Objects) $(Enclave_Seal_Name) $(Signed_Enclave_Seal_Name)
-	@rm -f $(Enclave_Objects_Files) App/Enclave_u.* Enclave/Enclave_t.* App/sgx_tsgxssl_u.* Enclave/sgx_tsgxssl_t.*
+	@rm -f $(Enclave_Objects_Files) App/Enclave_u.* Enclave/Enclave_t.* App/sgx_tsgxssl_u.* Enclave/sgx_tsgxssl_t.* 
 
 cleanAll:
 	@make clean
 	@rm -f AES_secret_key.txt sealed_file.txt user_private_key.pem Enclave_signing_key.pem
+	@if [ -d Test ]; then rm -r Test; fi

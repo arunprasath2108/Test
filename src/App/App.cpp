@@ -1,11 +1,6 @@
 #include "App.h"
-#include "sgx_urts.h"
-#include "Ocalls/Ocall_file.h"
-#include "CryptoUntrusted/Crypto_u.h"
-#include <ctime>
 
 static std::vector<std::string> temp_arr;
-const char** B_P_array = nullptr;
 const char** U_P_array = nullptr;
 
 UserData* test_user;
@@ -15,8 +10,7 @@ int g_user_id = 0;
 int GenerateRandomNumber() {
     
     std::srand(static_cast<unsigned int>(std::time(0)));
-    int random_number = std::rand() % 100000;
-    return random_number;
+    return std::rand() % 100000;
 }
 
 static sgx_status_t InitializeEnclave(const char* enclave_path)
@@ -93,18 +87,6 @@ bool SendUserdata() {
     return true;
 }
 
-void GetBreachedPasswords(const char* FILE_NAME) {
-    //check - xml file for heap size to send more data
-    temp_arr.clear();
-    temp_arr = ReadFileLines(FILE_NAME);
-    size_t len = temp_arr.size();
-    B_P_array = new const char*[len];
-    for(size_t i=0; i<len; i++) {
-        B_P_array[i] = temp_arr[i].c_str();
-    }
-
-}
-
 void GetUserPasswords(const char* FILE_NAME) {
     temp_arr.clear();
     temp_arr = ReadFileLines(FILE_NAME);
@@ -113,19 +95,6 @@ void GetUserPasswords(const char* FILE_NAME) {
     for(size_t i=0; i<len; i++) {
         U_P_array[i] = temp_arr[i].c_str();
     }
-}
-
-bool SendBreachedPasswords() {
-
-    GetBreachedPasswords(BREACHED_PASSWORDS_FILE);
-
-    sgx_status_t sgx_sts = EcallGetBreachedPasswords(eid, B_P_array, temp_arr.size());
-    if( sgx_sts != SGX_SUCCESS ) { 
-        return false; 
-    }
-
-    delete[] B_P_array;
-    return true;
 }
 
 bool SendUserPasswords() {
@@ -162,6 +131,7 @@ bool SendUserPasswords() {
     free(key);
     free(tag);
     free(iv);
+
     return true;
 }
 
@@ -185,7 +155,7 @@ void ViewOptions() {
 
 }
 
-int GetUserInput() {
+int ChooseOption() {
 
     int input;
     while(true) {
@@ -208,7 +178,7 @@ bool IsUserExists(int user_id) {
 
     std::vector<std::string> existing_users = ReadFileLines(USERS_ID_FILE);
 
-    for( int i=0; i<existing_users.size(); i++ ) {
+    for( size_t i=0; i<existing_users.size(); i++ ) {
         if(existing_users[i] == uid) {
             return true;
         }
@@ -216,19 +186,29 @@ bool IsUserExists(int user_id) {
     return false;
 }
 
+int GetUserInput() {
+
+    int input;
+    std::cin >> input;
+    if(input > 0 && input <= 99999) {
+        return input;
+    }
+    else {
+        OcallPrintError("invalid input.");
+        std::cin.clear();
+        std::cin.ignore(1000, '\n');
+        return -1;
+    }   
+}
+
 int GetUserIDForComparison() {
 
     while(true) {
         printf("enter user id for breach test : ");
-        std::cin >> g_user_id;
-        if(g_user_id > 0 && g_user_id <= 99999) {
-            return g_user_id;
+        int input = GetUserInput();
+        if(input != -1) {
+            return input;
         }
-        else {
-            OcallPrintError("input mismatch.");
-            std::cin.clear();
-            std::cin.ignore(1000, '\n');
-        }      
     }
 }
 
@@ -238,27 +218,20 @@ int GetNewUserID() {
     while(true) {
         
         printf("Enter user id between 1 - 99999 : ");
-        std::cin >> input;
-        if(input > 0 && input <= 99999) {
+        int input = GetUserInput();
+        if(input != -1) {
 
             if( OcallIsFileExist(USERS_ID_FILE) == 1) {
                 if(IsUserExists(input) == false) {
                     return input;
-                }
+                } 
                 else {
                     printf("user id %d already exists.\n", input);
                 }
-            }
-            else {
+            } else {
                 return input;
             }
         }
-        else {
-            OcallPrintError("user id is invalid.");
-            std::cin.clear();
-            std::cin.ignore(1000, '\n');
-        }    
-
     }
 }
 
@@ -282,7 +255,7 @@ void AddUser() {
     }
 
     std::string uid_str = std::to_string(uid);
-    std::string keys_file = "Test/keys/" + uid_str + "_key.pem";
+    std::string keys_file = "Test/Keys/" + uid_str + "_key.pem";
 
     //save private key to file
     if (!SaveKeyToFile(keys_file.c_str(), rsa)) {
@@ -307,8 +280,9 @@ void AddUser() {
 
 void BreachDetection() {
 
-    if(OcallIsFileExist(SEALED_FILE_NAME) == 0) {
-        printf("sorry! no users are available.\n");
+    g_user_id = GetUserIDForComparison();
+    if(IsUserExists(g_user_id) == 0) {
+        printf("sorry! no user with UID : %d is available.\n", g_user_id);
         return;
     }
 
@@ -317,12 +291,6 @@ void BreachDetection() {
         return;
     }
 
-    if(SendBreachedPasswords() == false) {
-        printf("can't load breached passwords inside the enclave memory.\n");
-        return;
-    }
-
-    g_user_id = GetUserIDForComparison();
     if( CheckBreachedPasswords(g_user_id) == false ) {
         printf("breach detection failed.\n"); 
     }
@@ -339,8 +307,8 @@ int main() {
     }
 
     ViewOptions();
-
-    int usr_opt = GetUserInput();
+ 
+    int usr_opt = ChooseOption();
     if(usr_opt == 1) 
     {
         AddUser();
@@ -357,7 +325,7 @@ int main() {
     {
         printf("invalid user input.\n");
     }
-
+ 
     return 0;
 
 }

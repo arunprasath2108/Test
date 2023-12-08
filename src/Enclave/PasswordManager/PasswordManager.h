@@ -5,12 +5,16 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include "sstream"
  
 #include "../Enclave.h"
   
-static std::vector<std::string> g_userPasswords;
-static std::set<std::string> g_breachedPasswords;
+typedef std::set<std::string> stringSet; 
+
+static stringSet g_userPasswords;
+static stringSet g_breachedPasswords;
 static std::unordered_map<std::string, std::string> g_result_map;
 
 
 #endif
+ 

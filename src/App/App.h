@@ -4,15 +4,18 @@
 #include <map>
 #include <vector>
 #include <cstring>
+#include <ctime>
 
 #include "Enclave_u.h"
+#include "sgx_urts.h"
+
 #include "../common/utils.h"
+#include "Ocalls/Ocall_file.h"
+#include "CryptoUntrusted/Crypto_u.h"
 
   
 #define ENCLAVE_SEAL_NAME "enclave_seal.signed.so"
-#define BREACHED_PASSWORDS_FILE "BreachedPassword_Hashes.txt"
 #define USER_PASSWORDS_FILE "UserPassword_Hashes.txt"
-#define TEST_USER_PRIVATE_KEY "user_private_key.pem"
 #define USERS_ID_FILE "Test/users_id.txt"
 
 extern int g_user_id;

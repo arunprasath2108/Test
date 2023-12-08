@@ -1,7 +1,5 @@
 #include "Enclave.h"
-#include <iostream>
-#include <cstring>
- 
+
 
 uint8_t* GetSealedFileContent(const char* FILE_NAME) {
 
@@ -29,7 +27,7 @@ uint8_t* GetSealedFileContent(const char* FILE_NAME) {
 
     return sealed_data;
 }
-
+  
 void DeserializeMap(const char* serializedData) {
      
     std::string keyValueString;
@@ -62,7 +60,7 @@ void DeserializeMap(const char* serializedData) {
             keyValueString.clear();
         }
     }
-}
+} 
 
 void UnsealAndDeserializeIntoMap() {
 
@@ -105,10 +103,10 @@ void UnsealData(uint8_t* sealed_data, uint8_t* unsealed_data, uint32_t plaintext
 void SealAndSaveData(const char* serializedData) {
 
     sgx_status_t sealing_status;
-
+ 
     //calc sealed data size
-    uint32_t sealed_size = sgx_calc_sealed_data_size(0, strlen(serializedData));
-    if ( sealed_size < 0 ) {
+    uint32_t sealed_size = sgx_calc_sealed_data_size(0, (uint32_t)strlen(serializedData));
+    if ( sealed_size == UINT32_MAX ) {
         OcallPrintError("sealed data size calculation failed.\n");
     }
 
@@ -118,7 +116,7 @@ void SealAndSaveData(const char* serializedData) {
         OcallPrintError("memory allocation failed for sealed data.\n");
     }
 
-    sealing_status = sgx_seal_data(0, NULL, strlen(serializedData), (const uint8_t*)serializedData, (uint32_t)sealed_size, (sgx_sealed_data_t*)sealed_data);
+    sealing_status = sgx_seal_data(0, NULL, (uint32_t)strlen(serializedData), (const uint8_t*)serializedData, (uint32_t)sealed_size, (sgx_sealed_data_t*)sealed_data);
     if ( sealing_status != SGX_SUCCESS ) {
         free(sealed_data);
         OcallPrintError("sealing data failed inside enclave.\n");
@@ -209,15 +207,17 @@ void EcallSealData(uint8_t* ciphertext, size_t cipher_len, uint8_t* iv, size_t i
 }   
 
 const char* SerializeMap(const std::unordered_map<std::string, std::string>& local_map) {
- 
-    std::string serializedData;
     
+    std::string serializedData;
     for (const auto& entry : local_map) {
         serializedData.append(entry.first.c_str());
         serializedData.append("-");     
         serializedData.append(entry.second.c_str());
         serializedData.append("~");     
     }
-     
-    return serializedData.c_str();
+
+    char* result = new char[serializedData.size() + 1];
+    memcpy(result, serializedData.c_str(), serializedData.size()+1);
+
+    return result;
 }

@@ -6,13 +6,13 @@ void DeserializeUserPasswords(uint8_t* passwords_arr, size_t arr_len) {
 
     for(size_t i=0; i<= arr_len; i++) {
         if(passwords_arr[i] == '-') {
-            g_userPasswords.push_back(password);
+            g_userPasswords.insert(password);
             ++i;
             password.clear();
         }
         password += passwords_arr[i];        
     }
-    g_userPasswords.push_back(password);
+    g_userPasswords.insert(password);
 }
 
 void EcallGetUserPasswords(uint8_t* enc_passwords, size_t enc_pass_len, uint8_t* iv, size_t iv_len, uint8_t* tag, size_t tag_len) {
@@ -28,28 +28,71 @@ void EcallGetUserPasswords(uint8_t* enc_passwords, size_t enc_pass_len, uint8_t*
     DeserializeUserPasswords(decrypted_text, decrypted_len);
     free(decrypted_text);
 }
-   
-void EcallGetBreachedPasswords(const char* breached_arr[], size_t arr_len) {
-
-    for (size_t i = 0; i < arr_len; i++) {
-        g_breachedPasswords.insert(breached_arr[i]);
-    }
-}
  
-void CheckBreachedPasswords() {
-    g_result_map.clear();
+std::tuple<std::string, std::string> SplitHash(const char* password) {
+    std::string prefix = "";
+    std::string suffix = "";
+    for(size_t i=0; i< strlen(password); i++) {
+        if(i < 5) {
+            prefix += password[i];
+        } else {
+            suffix += password[i];
+        }
+    }
+    return std::make_tuple(prefix, suffix);
+} 
 
-    for (const std::string& password : g_userPasswords) {
-        bool isBreached = g_breachedPasswords.find(password) != g_breachedPasswords.end();
-        if(isBreached) {
-            g_result_map[password] = "yes";
+void GetBreachedPasswords(std::string hash_prefix) {
+    
+    char* untrusted_str;
+    size_t len;
+    int isResponseOK = 0;
+    OcallGetAPIResponse(&isResponseOK, hash_prefix.c_str(), &untrusted_str, &len);
+    if(isResponseOK == 0) {
+        OcallPrintError("can't fetch breached passwords.");
+        return;
+    }
+    char *hashes = new char[len]; 
+    memcpy(hashes, untrusted_str, len);
+
+    std::istringstream iss((std::string)hashes);
+
+    while (iss) {
+        std::string line;
+        std::getline(iss, line);
+        std::size_t pos = line.find(':');
+
+        if (pos != std::string::npos) {
+            std::string hash = line.substr(0, pos);
+            g_breachedPasswords.insert(hash);
         }
     }
 
+    delete[] hashes;
 }
 
-void DeserializeIntoMap(const char* serializedData) {
+void CheckBreachedPasswords(stringSet userPasswords) {
+    g_result_map.clear();
+    g_breachedPasswords.clear();
+
+    for (const std::string& password : userPasswords) {
     
+        std::tuple<std::string, std::string> hash_split = SplitHash(password.c_str());
+        std::string prefix_hash = std::get<0>(hash_split);
+        std::string suffix_hash = std::get<1>(hash_split);
+ 
+        GetBreachedPasswords(prefix_hash);
+        bool isBreached = g_breachedPasswords.find(suffix_hash) != g_breachedPasswords.end();
+        if(isBreached) {
+            g_result_map[password] = "IsBreached";
+        }
+        g_breachedPasswords.clear();
+    }
+
+}
+ 
+void DeserializeIntoMap(const char* serializedData) {
+     
     std::string keyValueString;
     std::string key;
     std::string value;
@@ -165,7 +208,7 @@ RSA* UnsealAndGetPublicKey(long long user_id) {
   
 void EncryptAndSendResult(long long user_id) {
 
-    const char* serializedData = SerializeMap(g_result_map); 
+    const char* serializedData = SerializeMap(g_result_map);
     uint8_t* plaintext = (uint8_t*)serializedData;
     int ciphertext_len = strlen((char*)plaintext);
     uint8_t* encryptedResult = (uint8_t*)malloc(ciphertext_len);
@@ -184,10 +227,10 @@ void EncryptAndSendResult(long long user_id) {
     free(encryptedResult);
     
 }
-
+ 
 void EcallComparePasswords(long long user_id) {
 
-    CheckBreachedPasswords();
+    CheckBreachedPasswords(g_userPasswords);
 
     if( g_result_map.empty() ) {
         OcallPrintError("no breached password in user passwords.");

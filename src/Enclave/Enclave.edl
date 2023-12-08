@@ -4,7 +4,7 @@ enclave {
     from "sgx_pthread.edl" import *;
     
     trusted {
-
+ 
         public void EcallSealData( [in, size=cipher_len] uint8_t* ciphertext,
                                     size_t cipher_len,
                                     [in, size=iv_len] uint8_t* iv,
@@ -18,11 +18,9 @@ enclave {
                                     size_t iv_len,
                                     [in, size=tag_len] uint8_t* tag,
                                     size_t tag_len );
-
-        public void EcallGetBreachedPasswords( [in, count=arr_len] const char** breached_arr, size_t arr_len );
  
         public void EcallComparePasswords( long long user_id );
-
+ 
     };
  
     untrusted {
@@ -41,5 +39,6 @@ enclave {
 
         void OcallPrintError( [in, string] const char *error_message );
 
+        int OcallGetAPIResponse( [in, string] const char* prefix_hash, [out] char** b_passwords, [out] size_t* pass_len);
     };
 }; 
